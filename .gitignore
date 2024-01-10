@@ -1,0 +1,17 @@
+# Virtual environments
+.venv
+venv
+.env
+env
+
+# Outputs
+**.csv
+
+# Data
+data/**
+
+# Python utils
+__pycache__
+
+# 0S utils
+.DS_Store
