@@ -5,15 +5,14 @@ from torch_geometric.data import Dataset
 from torch_geometric.data import Data
 from torch.utils.data import Dataset as TorchDataset
 import pandas as pd
-import numpy as np
 
 class GraphTextDataset(Dataset):
-    def __init__(self, root, gt, split, tokenizer=None, transform=None, pre_transform=None):
+    def __init__(self, root, gt, split, tokenizer=None, transform=None, pre_transform=None, nrows=None):
         self.root = root
         self.gt = gt
         self.split = split
         self.tokenizer = tokenizer
-        self.description = pd.read_csv(os.path.join(self.root, split+'.tsv'), sep='\t', header=None)   
+        self.description = pd.read_csv(os.path.join(self.root, split+'.tsv'), sep='\t', header=None, nrows=nrows)   
         self.description = self.description.set_index(0).to_dict()
         self.cids = list(self.description[1].keys())
         
@@ -44,38 +43,35 @@ class GraphTextDataset(Dataset):
         pass
         
     def process_graph(self, raw_path):
-        edge_index  = []
-        x = []
-        with open(raw_path, 'r') as f:
-            next(f)
-            for line in f: 
-                if line != "\n":
-                    edge = *map(int, line.split()), 
-                    edge_index.append(edge)
-                else:
-                    break
-            next(f)
-            for line in f: #get mol2vec features:
-                substruct_id = line.strip().split()[-1]
-                if substruct_id in self.gt.keys():
-                    x.append(self.gt[substruct_id])
-                else:
-                    x.append(self.gt['UNK'])
-        return torch.LongTensor(np.array(edge_index)).T, torch.FloatTensor(x)
+      edge_index  = []
+      x = []
+      with open(raw_path, 'r') as f:
+        next(f)
+        for line in f: 
+          if line != "\n":
+            edge = *map(int, line.split()), 
+            edge_index.append(edge)
+          else:
+            break
+        next(f)
+        for line in f: #get mol2vec features:
+          substruct_id = line.strip().split()[-1]
+          if substruct_id in self.gt.keys():
+            x.append(self.gt[substruct_id])
+          else:
+            x.append(self.gt['UNK'])
+        return torch.LongTensor(edge_index).T, torch.FloatTensor(x)
 
     def process(self):
-        sep_char = '/'
-        if sep_char not in self.raw_paths[0]:
-            sep_char = '\\'
         i = 0        
         for raw_path in self.raw_paths:
-            cid = int(raw_path.split(sep_char)[-1][:-6])
+            cid = int(raw_path.split('/')[-1][:-6])
             text_input = self.tokenizer([self.description[1][cid]],
-                                    return_tensors="pt", 
-                                    truncation=True, 
-                                    max_length=256,
-                                    padding="max_length",
-                                    add_special_tokens=True,)
+                                   return_tensors="pt", 
+                                   truncation=True, 
+                                   max_length=256,
+                                   padding="max_length",
+                                   add_special_tokens=True,)
             edge_index, x = self.process_graph(raw_path)
             data = Data(x=x, edge_index=edge_index, input_ids=text_input['input_ids'], attention_mask=text_input['attention_mask'])
 
@@ -95,11 +91,11 @@ class GraphTextDataset(Dataset):
     
     
 class GraphDataset(Dataset):
-    def __init__(self, root, gt, split, transform=None, pre_transform=None):
+    def __init__(self, root, gt, split, transform=None, pre_transform=None, nrows=None):
         self.root = root
         self.gt = gt
         self.split = split
-        self.description = pd.read_csv(os.path.join(self.root, split+'.txt'), sep='\t', header=None)
+        self.description = pd.read_csv(os.path.join(self.root, split+'.txt'), sep='\t', header=None, nrows=None)
         self.cids = self.description[0].tolist()
         
         self.idx_to_cid = {}
@@ -129,24 +125,24 @@ class GraphDataset(Dataset):
         pass
         
     def process_graph(self, raw_path):
-        edge_index  = []
-        x = []
-        with open(raw_path, 'r') as f:
-            next(f)
-            for line in f: 
-                if line != "\n":
-                    edge = *map(int, line.split()), 
-                    edge_index.append(edge)
-                else:
-                    break
-            next(f)
-            for line in f:
-                substruct_id = line.strip().split()[-1]
-                if substruct_id in self.gt.keys():
-                    x.append(self.gt[substruct_id])
-                else:
-                    x.append(self.gt['UNK'])
-            return torch.LongTensor(edge_index).T, torch.FloatTensor(x)
+      edge_index  = []
+      x = []
+      with open(raw_path, 'r') as f:
+        next(f)
+        for line in f: 
+          if line != "\n":
+            edge = *map(int, line.split()), 
+            edge_index.append(edge)
+          else:
+            break
+        next(f)
+        for line in f:
+          substruct_id = line.strip().split()[-1]
+          if substruct_id in self.gt.keys():
+            x.append(self.gt[substruct_id])
+          else:
+            x.append(self.gt['UNK'])
+        return torch.LongTensor(edge_index).T, torch.FloatTensor(x)
 
     def process(self):
         i = 0        
