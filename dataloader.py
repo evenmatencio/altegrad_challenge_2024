@@ -95,7 +95,7 @@ class GraphDataset(Dataset):
         self.root = root
         self.gt = gt
         self.split = split
-        self.description = pd.read_csv(os.path.join(self.root, split+'.txt'), sep='\t', header=None, nrows=None)
+        self.description = pd.read_csv(os.path.join(self.root, split+'.txt'), sep='\t', header=None, nrows=nrows)
         self.cids = self.description[0].tolist()
         
         self.idx_to_cid = {}
@@ -168,15 +168,22 @@ class GraphDataset(Dataset):
         return self.idx_to_cid
     
 class TextDataset(TorchDataset):
-    def __init__(self, file_path, tokenizer, max_length=256):
+    def __init__(self, file_path, tokenizer, max_length=256, nrows=None):
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.nrows=nrows
         self.sentences = self.load_sentences(file_path)
 
     def load_sentences(self, file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-        return [line.strip() for line in lines]
+            if self.nrows != None:
+                head = [next(file) for _ in range(self.nrows)]
+            else:
+               lines = file.readlines()
+               head = [line.strip() for line in lines]
+        return head
+    
+    
 
     def __len__(self):
         return len(self.sentences)
