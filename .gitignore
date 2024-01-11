@@ -9,6 +9,7 @@ env
 
 # Data
 data/**
+model_checkpoints/**
 
 # Python utils
 __pycache__
