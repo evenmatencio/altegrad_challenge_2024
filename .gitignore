@@ -9,6 +9,7 @@ env
 
 # Data
 data/**
+data.zip
 model_checkpoints/**
 
 # Sandbox
