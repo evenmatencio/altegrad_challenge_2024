@@ -11,6 +11,10 @@ env
 data/**
 model_checkpoints/**
 
+# Sandbox
+sandbox/**
+
+
 # Python utils
 __pycache__
 
