@@ -1,6 +1,6 @@
-from torch import nn
-import torch.nn.functional as F
+"Gather the encoders for text and graph, and the model."
 
+from torch import nn
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import global_mean_pool
 from transformers import AutoModel

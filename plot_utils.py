@@ -1,7 +1,10 @@
+"Plot useful graphs."
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 def plot_losses(train_metric, val_metric):
+    "Plot the loss at the end of each epoch (train+val). The training loss inside a batch is in --."
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     assert train_metric.shape[0] == val_metric.shape[0]
     nb_epochs = train_metric.shape[0]
@@ -18,6 +21,7 @@ def plot_losses(train_metric, val_metric):
     return fig, ax
 
 def plot_lrap(values):
+    "Plot the LRAP metric value at the end of each epoch for validation set."
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     ax.plot(list(range(len(values))), values, c='r')
     ax.set_xlabel("Epochs")
@@ -25,4 +29,3 @@ def plot_lrap(values):
     ax.set_title("Validation LRAP")
     ax.set_xticks(list(range(len(values))), list(range(1, len(values)+1)))
     return fig, ax
-

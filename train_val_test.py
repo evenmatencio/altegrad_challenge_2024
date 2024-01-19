@@ -53,7 +53,7 @@ def train(
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    with open(f"{save_path}/hyper_parameters.json", "w+") as json_f:
+    with open(f"{save_path}/hyper_parameters.json", "w+", encoding="utf-8") as json_f:
         json.dump(hyper_param_dict, json_f, indent="    ")
 
     loss = 0
@@ -80,7 +80,7 @@ def train(
                                     input_ids.to(device),
                                     attention_mask.to(device))
             # Metric computation
-            current_loss = original_contrastive_loss(x_graph, x_text)   
+            current_loss = original_contrastive_loss(x_graph, x_text)
             optimizer.zero_grad()
             current_loss.backward()
             optimizer.step()
@@ -88,8 +88,7 @@ def train(
             count_iter += 1
             if count_iter % print_every == 0:
                 time2 = time.time()
-                print(f"Iteration: {count_iter}, Time: {time2 - time1:.4f} s, \
-                    training loss: {loss/print_every:.4f}")
+                print(f"Iteration: {count_iter}, Time: {time2-time1:.4f} s, training loss: {loss/print_every:.4f}")
                 losses.append(loss)
                 loss = 0
         model.eval()
@@ -115,7 +114,7 @@ def train(
         val_losses.append(val_loss/len(val_loader))
         val_lraps.append(val_lrap/len(val_loader))
 
-        # Plotting 
+        # Plotting
         if i == 0:
             losses_arr = np.array(losses).reshape([1, len(losses)])
         else:
@@ -129,8 +128,7 @@ def train(
 
         # Saving best model
         best_validation_loss = min(best_validation_loss, val_loss)
-        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: \
-                {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
+        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
             save_path_model = os.path.join(save_path, 'model.pt')

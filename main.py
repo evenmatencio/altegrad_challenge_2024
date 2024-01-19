@@ -1,14 +1,16 @@
-from dataloader import GraphTextDataset, GraphDataset, TextDataset
-from Model import Model
-from train_val_test import train, test
+"Similar to run_training_from_github_scripts.ipynb, training pipeline."
 
-from torch_geometric.loader import DataLoader
+import os
+import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
 import torch
 from torch import optim
-import pandas as pd
-import os
+from torch_geometric.loader import DataLoader
+
+from dataloader import GraphTextDataset, GraphDataset, TextDataset
+from Model import Model
+from train_val_test import train, test
 
 
 ##################################################
