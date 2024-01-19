@@ -13,7 +13,7 @@ from dataloader import GraphDataset, TextDataset
 
 
 def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
-    if device == "cuda":
+    if  "cuda" in str(device) :
         text_embeddings = text_embeddings.detach().cpu().numpy()
         graph_embeddings = graph_embeddings.detach().cpu().numpy()
     else:
