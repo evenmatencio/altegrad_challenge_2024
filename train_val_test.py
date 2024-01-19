@@ -5,6 +5,7 @@ import json
 import time
 import torch
 import torch_geometric
+import numpy as np
 from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
@@ -12,6 +13,7 @@ from sklearn.metrics import label_ranking_average_precision_score as lrap
 
 from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
+from plot_utils import plot_metric
 
 
 def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
@@ -46,6 +48,8 @@ def train(
     exactly the same as cosine similarity.
     In this case, both the loss and the LRAP metric rely on the same operation.
     """
+
+    # Saving hyper-parameters
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -54,13 +58,18 @@ def train(
 
     loss = 0
     losses = []
+    val_losses = []
+    val_lraps = []
     count_iter = 0
     time1 = time.time()
     best_validation_loss = 1000000
+
+    # Per batch training
     for i in range(nb_epochs):
         print(f'-----EPOCH{i+1}-----')
         model.train()
         for batch in train_loader:
+            # Forward step
             input_ids = batch.input_ids
             batch.pop('input_ids')
             attention_mask = batch.attention_mask
@@ -70,12 +79,12 @@ def train(
             x_graph, x_text = model(graph_batch.to(device),
                                     input_ids.to(device),
                                     attention_mask.to(device))
-            current_loss = original_contrastive_loss(x_graph, x_text)
+            # Metric computation
+            current_loss = original_contrastive_loss(x_graph, x_text)   
             optimizer.zero_grad()
             current_loss.backward()
             optimizer.step()
             loss += current_loss.item()
-
             count_iter += 1
             if count_iter % print_every == 0:
                 time2 = time.time()
@@ -88,6 +97,7 @@ def train(
         x_text_aggregated = torch.Tensor()
         x_graph_aggregated = torch.Tensor()
         for batch in val_loader:
+            # Forward setp
             input_ids = batch.input_ids
             batch.pop('input_ids')
             attention_mask = batch.attention_mask
@@ -102,20 +112,34 @@ def train(
             x_graph_aggregated = torch.concatenate((x_graph_aggregated, x_graph), axis=0)
             x_text_aggregated = torch.concatenate((x_text_aggregated, x_text), axis=0)
         val_lrap = compute_LRAP_metric(x_text_aggregated, x_graph_aggregated, device)
+        val_losses.append(val_loss/len(val_loader))
+
+        # Plotting 
+        if i == 0:
+            losses_arr = np.array(losses).reshape([1, len(losses)])
+        else:
+            losses_arr = np.concatenate((losses_arr, [losses]), axis=0)
+            loss_fig, _ =  plot_metric(losses_arr, np.array(val_losses))
+            loss_fig.suptitle("Loss")
+            loss_fig.savefig(f"{save_path}/losses.png")
+
+        losses = []
+
+        # Saving best model
         best_validation_loss = min(best_validation_loss, val_loss)
         print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: \
                 {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
-            save_path = os.path.join(save_path, 'model'+str(i)+'.pt')
+            save_path_model = os.path.join(save_path, 'model.pt')
             torch.save({
             'epoch': i,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'validation_accuracy': val_loss,
             'loss': loss,
-            }, save_path)
-            print(f'checkpoint saved to: {save_path}')
+            }, save_path_model)
+            print(f'checkpoint saved to: {save_path_model}')
 
 
 def test(
