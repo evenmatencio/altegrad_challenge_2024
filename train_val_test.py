@@ -13,7 +13,7 @@ from sklearn.metrics import label_ranking_average_precision_score as lrap
 
 from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
-from plot_utils import plot_metric
+from plot_utils import plot_losses, plot_lrap
 
 
 def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
@@ -113,17 +113,19 @@ def train(
             x_text_aggregated = torch.concatenate((x_text_aggregated, x_text), axis=0)
         val_lrap = compute_LRAP_metric(x_text_aggregated, x_graph_aggregated, device)
         val_losses.append(val_loss/len(val_loader))
+        val_lraps.append(val_lrap/len(val_loader))
 
         # Plotting 
         if i == 0:
             losses_arr = np.array(losses).reshape([1, len(losses)])
         else:
             losses_arr = np.concatenate((losses_arr, [losses]), axis=0)
-            loss_fig, _ =  plot_metric(losses_arr, np.array(val_losses))
-            loss_fig.suptitle("Loss")
+            loss_fig, _ =  plot_losses(losses_arr, np.array(val_losses))
             loss_fig.savefig(f"{save_path}/losses.png")
-
+            lrap_fig, _ = plot_lrap(val_lraps)
+            lrap_fig.savefig(f"{save_path}/val_lrap.png")
         losses = []
+        count_iter = 0
 
         # Saving best model
         best_validation_loss = min(best_validation_loss, val_loss)
