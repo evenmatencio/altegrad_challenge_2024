@@ -9,7 +9,12 @@ env
 
 # Data
 data/**
+data**.zip
 model_checkpoints/**
+
+# Sandbox
+sandbox**
+
 
 # Python utils
 __pycache__
