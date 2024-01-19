@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_metric(train_metric, val_metric):
+def plot_losses(train_metric, val_metric):
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     assert train_metric.shape[0] == val_metric.shape[0]
     nb_epochs = train_metric.shape[0]
@@ -11,5 +11,18 @@ def plot_metric(train_metric, val_metric):
         iterations = np.linspace(i, i+1, train_metric.shape[1])
         ax.plot(iterations, train_metric[i, :], c='b', linewidth=3, linestyle= '--')
     ax.legend()
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("Loss")
+    ax.set_title("Loss comparison")
+    ax.set_xticks(list(range(nb_epochs+1)), list(range(nb_epochs+1)))
+    return fig, ax
+
+def plot_lrap(values):
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    ax.plot(list(range(len(values))), values, c='r')
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("LRAP")
+    ax.set_title("Validation LRAP")
+    ax.set_xticks(list(range(len(values))), list(range(1, len(values)+1)))
     return fig, ax
 
