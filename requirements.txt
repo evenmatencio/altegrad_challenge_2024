@@ -3,3 +3,4 @@ torch
 torch_geometric
 transformers
 pandas
+matplotlib
