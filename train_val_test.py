@@ -138,7 +138,7 @@ def train(
         print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap/len(val_loader)}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
-            save_path_model = os.path.join(save_path, 'model'+str(i)+'.pt')
+            save_path_model = os.path.join(save_path, 'model.pt')
             torch.save({
             'epoch': i,
             'model_state_dict': model.state_dict(),
