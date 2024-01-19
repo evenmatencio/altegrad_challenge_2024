@@ -23,12 +23,12 @@ model.to(device)
 
 # Load data
 gt = np.load("./data/token_embedding_dict.npy", allow_pickle=True)[()]
-val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=20)
-train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=20)
+val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=10)
+train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=10)
 
 # Hyper-parameters
-nb_epochs = 1
-batch_size = 5
+nb_epochs = 2
+batch_size = 2
 learning_rate = 2e-5
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
@@ -43,10 +43,10 @@ hyper_param = {
     "model": model.__str__()
     }
 
-# Save path 
+# Save path
 save_path = './model_checkpoints/test'
 
-train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, printEvery=2)
+train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, print_every=2)
 
 
 

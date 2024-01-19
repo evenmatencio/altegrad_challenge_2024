@@ -1,8 +1,10 @@
+"Wrap the training, validation and testing steps into functions."
+
+import os
+import json
 import time
 import torch
 import torch_geometric
-import os
-import json
 from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
@@ -13,6 +15,7 @@ from dataloader import GraphDataset, TextDataset
 
 
 def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
+    "See label_ranking_average_precision_score from scikit learn."
     if  "cuda" in str(device) :
         text_embeddings = text_embeddings.detach().cpu().numpy()
         graph_embeddings = graph_embeddings.detach().cpu().numpy()
@@ -32,14 +35,15 @@ def train(
     save_path: str,
     device,
     hyper_param_dict,
-    printEvery: int = 50,
+    print_every: int = 50,
 ):
     """
     WARNING:
     -------
     The loss that is used should be adapted to the one we use to compute the LRAP metric.
 
-    For instance, the original_contrastive_loss is based on dot product, exactly the same as cosine similarity.
+    For instance, the original_contrastive_loss is based on dot product,
+    exactly the same as cosine similarity.
     In this case, both the loss and the LRAP metric rely on the same operation.
     """
     if not os.path.exists(save_path):
@@ -48,14 +52,13 @@ def train(
     with open(f"{save_path}/hyper_parameters.json", "w+") as json_f:
         json.dump(hyper_param_dict, json_f, indent="    ")
 
-    tr_lrap = 0
     loss = 0
     losses = []
     count_iter = 0
     time1 = time.time()
     best_validation_loss = 1000000
     for i in range(nb_epochs):
-        print('-----EPOCH{}-----'.format(i+1))
+        print(f'-----EPOCH{i+1}-----')
         model.train()
         for batch in train_loader:
             input_ids = batch.input_ids
@@ -63,42 +66,45 @@ def train(
             attention_mask = batch.attention_mask
             batch.pop('attention_mask')
             graph_batch = batch
-            
-            x_graph, x_text = model(graph_batch.to(device), 
-                                    input_ids.to(device), 
+
+            x_graph, x_text = model(graph_batch.to(device),
+                                    input_ids.to(device),
                                     attention_mask.to(device))
-            current_loss = original_contrastive_loss(x_graph, x_text)   
+            current_loss = original_contrastive_loss(x_graph, x_text)
             optimizer.zero_grad()
             current_loss.backward()
             optimizer.step()
             loss += current_loss.item()
-            tr_lrap += compute_LRAP_metric(x_text, x_graph, device)
-            
+
             count_iter += 1
-            if count_iter % printEvery == 0:
+            if count_iter % print_every == 0:
                 time2 = time.time()
-                print("Iteration: {0}, Time: {1:.4f} s, training loss: {2:.4f}, training LRAP: {3:.4f}".format(count_iter,
-                                                                            time2 - time1, loss/printEvery, tr_lrap/printEvery))
+                print(f"Iteration: {count_iter}, Time: {time2 - time1:.4f} s, \
+                    training loss: {loss/print_every:.4f}")
                 losses.append(loss)
-                loss = 0 
-                tr_lrap = 0
-        model.eval()       
-        val_loss = 0   
-        val_lrap = 0     
+                loss = 0
+        model.eval()
+        val_loss = 0
+        x_text_aggregated = torch.Tensor()
+        x_graph_aggregated = torch.Tensor()
         for batch in val_loader:
             input_ids = batch.input_ids
             batch.pop('input_ids')
             attention_mask = batch.attention_mask
             batch.pop('attention_mask')
             graph_batch = batch
-            x_graph, x_text = model(graph_batch.to(device), 
-                                    input_ids.to(device), 
+            x_graph, x_text = model(graph_batch.to(device),
+                                    input_ids.to(device),
                                     attention_mask.to(device))
-            current_loss = original_contrastive_loss(x_graph, x_text)   
+            current_loss = original_contrastive_loss(x_graph, x_text)
             val_loss += current_loss.item()
-            val_lrap += compute_LRAP_metric(x_text, x_graph, device)
+
+            x_graph_aggregated = torch.concatenate((x_graph_aggregated, x_graph), axis=0)
+            x_text_aggregated = torch.concatenate((x_text_aggregated, x_text), axis=0)
+        val_lrap = compute_LRAP_metric(x_text_aggregated, x_graph_aggregated, device)
         best_validation_loss = min(best_validation_loss, val_loss)
-        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap/len(val_loader)}')
+        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: \
+                {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
             save_path = os.path.join(save_path, 'model'+str(i)+'.pt')
@@ -109,7 +115,7 @@ def train(
             'validation_accuracy': val_loss,
             'loss': loss,
             }, save_path)
-            print('checkpoint saved to: {}'.format(save_path))
+            print(f'checkpoint saved to: {save_path}')
 
 
 def test(
@@ -120,7 +126,8 @@ def test(
     device,
     batch_size = 32,
 ):
-    
+    "Test loop."
+
     # Loading the model
     checkpoint = torch.load(checkpoint_path)
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -139,8 +146,8 @@ def test(
     test_text_loader = TorchDataLoader(test_text_dataset, batch_size=batch_size, shuffle=False)
     text_embeddings = []
     for batch in test_text_loader:
-        for output in text_model(batch['input_ids'].to(device), 
+        for output in text_model(batch['input_ids'].to(device),
                                 attention_mask=batch['attention_mask'].to(device)):
             text_embeddings.append(output.tolist())
-    
+
     return text_embeddings, graph_embeddings
