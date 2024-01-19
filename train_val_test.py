@@ -2,6 +2,7 @@ import time
 import torch
 import torch_geometric
 import os
+import json
 from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
@@ -11,9 +12,13 @@ from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
 
 
-def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor):
-    text_embeddings = text_embeddings.detach().numpy()
-    graph_embeddings = graph_embeddings.detach().numpy()
+def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
+    if device == "cuda":
+        text_embeddings = text_embeddings.detach().cpu().numpy()
+        graph_embeddings = graph_embeddings.detach().cpu().numpy()
+    else:
+        text_embeddings = text_embeddings.detach().numpy()
+        graph_embeddings = graph_embeddings.detach().numpy()
     y_computed = cosine_similarity(text_embeddings, graph_embeddings)
     y_true = torch.eye(n=y_computed.shape[0])
     return lrap(y_true, y_computed)
@@ -24,8 +29,9 @@ def train(
     model: torch.nn.Module,
     train_loader: torch_geometric.data.DataLoader,
     val_loader: torch_geometric.data.DataLoader,
+    save_path: str,
     device,
-    save_path: str = './',
+    hyper_param_dict,
     printEvery: int = 50,
 ):
     """
@@ -36,6 +42,12 @@ def train(
     For instance, the original_contrastive_loss is based on dot product, exactly the same as cosine similarity.
     In this case, both the loss and the LRAP metric rely on the same operation.
     """
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    with open(f"{save_path}/hyper_parameters.json", "w+") as json_f:
+        json.dump(hyper_param_dict, json_f, indent="    ")
+
     tr_lrap = 0
     loss = 0
     losses = []
@@ -60,7 +72,7 @@ def train(
             current_loss.backward()
             optimizer.step()
             loss += current_loss.item()
-            tr_lrap += compute_LRAP_metric(x_text, x_graph)
+            tr_lrap += compute_LRAP_metric(x_text, x_graph, device)
             
             count_iter += 1
             if count_iter % printEvery == 0:
@@ -84,7 +96,7 @@ def train(
                                     attention_mask.to(device))
             current_loss = original_contrastive_loss(x_graph, x_text)   
             val_loss += current_loss.item()
-            val_lrap += compute_LRAP_metric(x_text, x_graph)
+            val_lrap += compute_LRAP_metric(x_text, x_graph, device)
         best_validation_loss = min(best_validation_loss, val_loss)
         print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap/len(val_loader)}')
         if best_validation_loss==val_loss:

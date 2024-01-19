@@ -33,9 +33,20 @@ learning_rate = 2e-5
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-save_path = './model_checkpoints'
+hyper_param = {
+    "nb_epochs": nb_epochs,
+    "batch_size": batch_size,
+    "learning_rate": learning_rate,
+    "loss": "original_loss", 
+    "LRAP": "using cosine similarity" ,
+    "optimizer": optimizer.__str__(),
+    "model": model.__str__()
+    }
 
-train(nb_epochs, optimizer, model, train_loader, val_loader, device, save_path, printEvery=2)
+# Save path 
+save_path = './model_checkpoints/test'
+
+train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, printEvery=2)
 
 
 
