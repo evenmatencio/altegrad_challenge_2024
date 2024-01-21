@@ -79,6 +79,8 @@ def train(
             x_graph, x_text = model(graph_batch.to(device),
                                     input_ids.to(device),
                                     attention_mask.to(device))
+            print(x_graph.shape)
+            print(x_text.shape)
             # Metric computation
             current_loss = original_contrastive_loss(x_graph, x_text)
             optimizer.zero_grad()
@@ -93,8 +95,8 @@ def train(
                 loss = 0
         model.eval()
         val_loss = 0
-        x_text_aggregated = torch.tensor(device=device)
-        x_graph_aggregated = torch.tensor(device=device)
+        x_text_aggregated = torch.empty(size=x_text.shape, device=device)
+        x_graph_aggregated = torch.empty(size=x_graph.shape, device=device)
         for batch in val_loader:
             # Forward setp
             input_ids = batch.input_ids
