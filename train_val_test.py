@@ -79,8 +79,6 @@ def train(
             x_graph, x_text = model(graph_batch.to(device),
                                     input_ids.to(device),
                                     attention_mask.to(device))
-            print(x_graph.shape)
-            print(x_text.shape)
             # Metric computation
             current_loss = original_contrastive_loss(x_graph, x_text)
             optimizer.zero_grad()
