@@ -93,8 +93,8 @@ def train(
                 loss = 0
         model.eval()
         val_loss = 0
-        x_text_aggregated = torch.Tensor(device=device)
-        x_graph_aggregated = torch.Tensor(device=device)
+        x_text_aggregated = torch.tensor(device=device)
+        x_graph_aggregated = torch.tensor(device=device)
         for batch in val_loader:
             # Forward setp
             input_ids = batch.input_ids
