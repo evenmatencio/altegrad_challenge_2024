@@ -16,16 +16,10 @@ from dataloader import GraphDataset, TextDataset
 from plot_utils import plot_losses, plot_lrap
 
 
-def compute_LRAP_metric(text_embeddings: torch.Tensor, graph_embeddings: torch.Tensor, device):
+def compute_LRAP_metric(text_embeddings: list, graph_embeddings: list):
     "See label_ranking_average_precision_score from scikit learn."
-    if  "cuda" in str(device) :
-        text_embeddings = text_embeddings.detach().cpu().numpy()
-        graph_embeddings = graph_embeddings.detach().cpu().numpy()
-    else:
-        text_embeddings = text_embeddings.detach().numpy()
-        graph_embeddings = graph_embeddings.detach().numpy()
     y_computed = cosine_similarity(text_embeddings, graph_embeddings)
-    y_true = torch.eye(n=y_computed.shape[0])
+    y_true = np.eye(N=y_computed.shape[0])
     return lrap(y_true, y_computed)
 
 def train(
@@ -93,8 +87,8 @@ def train(
                 loss = 0
         model.eval()
         val_loss = 0
-        x_text_aggregated = torch.empty(size=x_text.shape, device=device)
-        x_graph_aggregated = torch.empty(size=x_graph.shape, device=device)
+        val_graph_embeddings = []
+        val_text_embeddings = []
         for batch in val_loader:
             # Forward setp
             input_ids = batch.input_ids
@@ -107,10 +101,12 @@ def train(
                                     attention_mask.to(device))
             current_loss = original_contrastive_loss(x_graph, x_text)
             val_loss += current_loss.item()
+            for x_graph_emb in x_graph.tolist():
+                val_graph_embeddings.append(x_graph_emb)
+            for x_text_emb in x_text.tolist():
+                val_text_embeddings.append(x_text_emb)
 
-            x_graph_aggregated = torch.concatenate((x_graph_aggregated, x_graph), axis=0)
-            x_text_aggregated = torch.concatenate((x_text_aggregated, x_text), axis=0)
-        val_lrap = compute_LRAP_metric(x_text_aggregated, x_graph_aggregated, device)
+        val_lrap = compute_LRAP_metric(val_text_embeddings, val_graph_embeddings)
         val_losses.append(val_loss/len(val_loader))
         val_lraps.append(val_lrap/len(val_loader))
 
