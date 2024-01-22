@@ -83,7 +83,7 @@ def train(
             if count_iter % print_every == 0:
                 time2 = time.time()
                 print(f"Iteration: {count_iter}, Time: {time2-time1:.4f} s, training loss: {loss/print_every:.4f}")
-                losses.append(loss)
+                losses.append(loss/print_every)
                 loss = 0
         model.eval()
         val_loss = 0
@@ -107,8 +107,9 @@ def train(
                 val_text_embeddings.append(x_text_emb)
 
         val_lrap = compute_LRAP_metric(val_text_embeddings, val_graph_embeddings)
-        val_losses.append(val_loss/len(val_loader))
-        val_lraps.append(val_lrap/len(val_loader))
+        val_loss = val_loss/len(val_loader)
+        val_losses.append(val_loss)
+        val_lraps.append(val_lrap)
 
         # Plotting
         if i == 0:
@@ -124,7 +125,7 @@ def train(
 
         # Saving best model
         best_validation_loss = min(best_validation_loss, val_loss)
-        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
+        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss}. Validation LRAP: {val_lrap}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
             save_path_model = os.path.join(save_path, 'model.pt')
