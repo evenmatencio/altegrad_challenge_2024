@@ -101,10 +101,10 @@ def train(
                                     attention_mask.to(device))
             current_loss = original_contrastive_loss(x_graph, x_text)
             val_loss += current_loss.item()
-            for x_graph_emb in x_graph.tolist():
-                val_graph_embeddings.append(x_graph_emb)
-            for x_text_emb in x_text.tolist():
-                val_text_embeddings.append(x_text_emb)
+            for x_graph_emb in x_graph:
+                val_graph_embeddings.append(x_graph_emb.tolist())
+            for x_text_emb in x_text:
+                val_text_embeddings.append(x_text_emb.tolist())
 
         val_lrap = compute_LRAP_metric(val_text_embeddings, val_graph_embeddings)
         val_loss = val_loss/len(val_loader)
@@ -157,6 +157,7 @@ def test(
     text_model = model.get_text_encoder()
 
     # Generating representation of the graph test set
+    idx_to_cid = test_cids_dataset.get_idx_to_cid()
     graph_test_loader = DataLoader(test_cids_dataset, batch_size=batch_size, shuffle=False)
     graph_embeddings = []
     for batch in graph_test_loader:
