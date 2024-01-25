@@ -6,8 +6,6 @@ import numpy as np
 def plot_losses(train_metric, val_metric):
     "Plot the loss at the end of each epoch (train+val). The training loss inside a batch is in --."
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
-    print('train_metric: ', train_metric)
-    print("val_metric", val_metric)
     assert train_metric.shape[0] == val_metric.shape[0]
     nb_epochs = train_metric.shape[0]
     ax.plot(range(1, nb_epochs+1), val_metric, label='Validation', c='r', linewidth=5)
@@ -24,7 +22,6 @@ def plot_losses(train_metric, val_metric):
 
 def plot_lrap(values):
     "Plot the LRAP metric value at the end of each epoch for validation set."
-    print("val_rap_values:", values )
     fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     ax.plot(list(range(len(values))), values, c='r')
     ax.set_xlabel("Epochs")
