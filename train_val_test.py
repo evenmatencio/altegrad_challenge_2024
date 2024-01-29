@@ -31,6 +31,7 @@ def train(
     save_path: str,
     device,
     hyper_param_dict,
+    save_id: int,
     print_every: int = 50,
 ):
     """
@@ -47,7 +48,7 @@ def train(
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    with open(f"{save_path}/hyper_parameters.json", "w+", encoding="utf-8") as json_f:
+    with open(f"{save_path}/hyper_parameters_{save_id}.json", "w+", encoding="utf-8") as json_f:
         json.dump(hyper_param_dict, json_f, indent="    ")
 
     loss = 0
@@ -117,9 +118,9 @@ def train(
         else:
             losses_arr = np.concatenate((losses_arr, [losses]), axis=0)
             loss_fig, _ =  plot_losses(losses_arr, np.array(val_losses))
-            loss_fig.savefig(f"{save_path}/losses.png")
+            loss_fig.savefig(f"{save_path}/losses_{save_id}.png")
             lrap_fig, _ = plot_lrap(val_lraps)
-            lrap_fig.savefig(f"{save_path}/val_lrap.png")
+            lrap_fig.savefig(f"{save_path}/val_lrap_{save_id}.png")
         losses = []
         count_iter = 0
 
