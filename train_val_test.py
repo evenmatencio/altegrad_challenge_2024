@@ -10,6 +10,7 @@ from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import label_ranking_average_precision_score as lrap
+import matplotlib.pyplot as plt
 
 from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
@@ -119,8 +120,10 @@ def train(
             losses_arr = np.concatenate((losses_arr, [losses]), axis=0)
             loss_fig, _ =  plot_losses(losses_arr, np.array(val_losses))
             loss_fig.savefig(f"{save_path}/losses_{save_id}.png")
+            plt.close()
             lrap_fig, _ = plot_lrap(val_lraps)
             lrap_fig.savefig(f"{save_path}/val_lrap_{save_id}.png")
+            plt.close()
         losses = []
         count_iter = 0
 

@@ -48,7 +48,7 @@ hyper_param = {
 # Save path
 save_path = './model_checkpoints/test'
 
-train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, print_every=2)
+train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, save_id=0, print_every=2)
 
 
 
