@@ -7,17 +7,17 @@ from transformers import AutoModel
 
 
 class GCNGraphEncoder(nn.Module):
-    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels, n_layers):
+    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels, n_gnn_layers):
         super(GCNGraphEncoder, self).__init__()
         self.nhid = nhid
         self.nout = nout
         self.relu = nn.ReLU()
         self.ln = nn.LayerNorm((nout))
-        self.n_layers = n_layers
+        self.n_layers = n_gnn_layers
         self.conv_0 = GCNConv(num_node_features, graph_hidden_channels)
         if self.n_layers < 2:
             raise ValueError("Number layers must be greater than 1.")
-        self.hidden_gnn_layers = nn.ModuleList([GCNConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_layers)])
+        self.hidden_gnn_layers = nn.ModuleList([GCNConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_gnn_layers-1)])
         self.mol_hidden1 = nn.Linear(graph_hidden_channels, nhid)
         self.mol_hidden2 = nn.Linear(nhid, nout)
 
@@ -40,7 +40,7 @@ class TextEncoder(nn.Module):
         super(TextEncoder, self).__init__()
         self.bert = AutoModel.from_pretrained(model_name)
         self.head = nn.Linear(bert_out, n_out)
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, input_ids, attention_mask):
         encoded_text = self.bert(input_ids, attention_mask=attention_mask)
@@ -48,9 +48,9 @@ class TextEncoder(nn.Module):
         return self.head(encoded_text)
 
 class Model(nn.Module):
-    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels, graph_nlayers):
+    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers):
         super(Model, self).__init__()
-        self.graph_encoder = GCNGraphEncoder(num_node_features, nout, nhid, graph_hidden_channels, graph_nlayers)
+        self.graph_encoder = GCNGraphEncoder(num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers)
         self.text_encoder = TextEncoder(model_name, nout)
 
     def forward(self, graph_batch, input_ids, attention_mask):
