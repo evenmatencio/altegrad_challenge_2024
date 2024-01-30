@@ -29,3 +29,13 @@ def plot_lrap(values):
     ax.set_title("Validation LRAP")
     ax.set_xticks(list(range(len(values))), list(range(1, len(values)+1)))
     return fig, ax
+
+def plot_lrs(values):
+    "Plot the learning rates at the end of each epoch"
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+    ax.plot(list(range(len(values))), values, c='r')
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("learning rate")
+    ax.set_title("LR")
+    ax.set_xticks(list(range(len(values))), list(range(1, len(values)+1)))
+    return fig, ax
