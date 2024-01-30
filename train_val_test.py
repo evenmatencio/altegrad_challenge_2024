@@ -10,6 +10,7 @@ from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import label_ranking_average_precision_score as lrap
+import matplotlib.pyplot as plt
 
 from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
@@ -31,6 +32,7 @@ def train(
     save_path: str,
     device,
     hyper_param_dict,
+    save_id: int,
     print_every: int = 50,
 ):
     """
@@ -47,7 +49,7 @@ def train(
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    with open(f"{save_path}/hyper_parameters.json", "w+", encoding="utf-8") as json_f:
+    with open(f"{save_path}/hyper_parameters_{save_id}.json", "w+", encoding="utf-8") as json_f:
         json.dump(hyper_param_dict, json_f, indent="    ")
 
     loss = 0
@@ -83,7 +85,7 @@ def train(
             if count_iter % print_every == 0:
                 time2 = time.time()
                 print(f"Iteration: {count_iter}, Time: {time2-time1:.4f} s, training loss: {loss/print_every:.4f}")
-                losses.append(loss)
+                losses.append(loss/print_every)
                 loss = 0
         model.eval()
         val_loss = 0
@@ -101,14 +103,15 @@ def train(
                                     attention_mask.to(device))
             current_loss = original_contrastive_loss(x_graph, x_text)
             val_loss += current_loss.item()
-            for x_graph_emb in x_graph.tolist():
-                val_graph_embeddings.append(x_graph_emb)
-            for x_text_emb in x_text.tolist():
-                val_text_embeddings.append(x_text_emb)
+            for x_graph_emb in x_graph:
+                val_graph_embeddings.append(x_graph_emb.tolist())
+            for x_text_emb in x_text:
+                val_text_embeddings.append(x_text_emb.tolist())
 
         val_lrap = compute_LRAP_metric(val_text_embeddings, val_graph_embeddings)
-        val_losses.append(val_loss/len(val_loader))
-        val_lraps.append(val_lrap/len(val_loader))
+        val_loss = val_loss/len(val_loader)
+        val_losses.append(val_loss)
+        val_lraps.append(val_lrap)
 
         # Plotting
         if i == 0:
@@ -116,15 +119,17 @@ def train(
         else:
             losses_arr = np.concatenate((losses_arr, [losses]), axis=0)
             loss_fig, _ =  plot_losses(losses_arr, np.array(val_losses))
-            loss_fig.savefig(f"{save_path}/losses.png")
+            loss_fig.savefig(f"{save_path}/losses_{save_id}.png")
+            plt.close()
             lrap_fig, _ = plot_lrap(val_lraps)
-            lrap_fig.savefig(f"{save_path}/val_lrap.png")
+            lrap_fig.savefig(f"{save_path}/val_lrap_{save_id}.png")
+            plt.close()
         losses = []
         count_iter = 0
 
         # Saving best model
         best_validation_loss = min(best_validation_loss, val_loss)
-        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss/len(val_loader)}. Validation LRAP: {val_lrap}')
+        print(f'-----EPOCH +{i+1}+ ----- done.  Validation loss: {val_loss}. Validation LRAP: {val_lrap}')
         if best_validation_loss==val_loss:
             print('validation loss improoved saving checkpoint...')
             save_path_model = os.path.join(save_path, 'model.pt')
@@ -156,6 +161,7 @@ def test(
     text_model = model.get_text_encoder()
 
     # Generating representation of the graph test set
+    idx_to_cid = test_cids_dataset.get_idx_to_cid()
     graph_test_loader = DataLoader(test_cids_dataset, batch_size=batch_size, shuffle=False)
     graph_embeddings = []
     for batch in graph_test_loader:

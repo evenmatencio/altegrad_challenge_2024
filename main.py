@@ -20,7 +20,7 @@ from train_val_test import train, test
 model_name = 'distilbert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300) # nout = bert model hidden dim
+model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300, graph_gnnlayers=3, text_head=False) # nout = bert model hidden dim
 model.to(device)
 
 # Load data
@@ -48,7 +48,7 @@ hyper_param = {
 # Save path
 save_path = './model_checkpoints/test'
 
-train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, print_every=2)
+train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, save_id=0, print_every=2)
 
 
 
