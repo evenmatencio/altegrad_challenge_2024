@@ -1,3 +1,5 @@
+"Loss used for training and evaluating the model."
+
 import torch
 
 CE = torch.nn.CrossEntropyLoss()
@@ -5,12 +7,13 @@ CE = torch.nn.CrossEntropyLoss()
 def original_contrastive_loss(v1, v2):
     """ 
     Computes a kind of Contrastive Loss, measuring the similarity between corresponding vectors
-    from the matrices v1 and V2. More precisely, it penalizes the distance between the identity matrix
-    of size [n_batch, n_batch] and the dot product <v1, v2^T>. 
+    from the matrices v1 and v2. More precisely, it penalizes the distance between the identity
+    matrix of size [n_batch, n_batch] and the dot product <v1, v2^T>. 
 
-    In other words we want to maximise the dot product between the representation of graph i v1_i and
-    the representation of text i v2_i, for all i in {1, ..., n_batch}, while minimizing the dot product
-    between one graph representation v1_i and all other texts representation v2_j, j!=i, and reciprocaly.
+    In other words we want to maximise the dot product between the representation of graph i v1_i
+    and the representation of text i v2_i, for all i in {1, ..., n_batch}, while minimizing the
+    dot product between one graph representation v1_i and all other texts representation v2_j,
+    j!=i, and reciprocaly.
 
     Note: both argument can be switched.
     Args:

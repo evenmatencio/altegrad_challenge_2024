@@ -1,21 +1,23 @@
-from torch import nn
-import torch.nn.functional as F
+"Gather the encoders for text and graph, and the model."
 
+from torch import nn
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import global_mean_pool
 from transformers import AutoModel
 
 
-class GraphEncoder(nn.Module):
-    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels):
-        super(GraphEncoder, self).__init__()
+class GCNGraphEncoder(nn.Module):
+    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels, n_gnn_layers):
+        super(GCNGraphEncoder, self).__init__()
         self.nhid = nhid
         self.nout = nout
         self.relu = nn.ReLU()
         self.ln = nn.LayerNorm((nout))
-        self.conv1 = GCNConv(num_node_features, graph_hidden_channels)
-        self.conv2 = GCNConv(graph_hidden_channels, graph_hidden_channels)
-        self.conv3 = GCNConv(graph_hidden_channels, graph_hidden_channels)
+        self.n_layers = n_gnn_layers
+        self.conv_0 = GCNConv(num_node_features, graph_hidden_channels)
+        if self.n_layers < 2:
+            raise ValueError("Number layers must be greater than 1.")
+        self.hidden_gnn_layers = nn.ModuleList([GCNConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_gnn_layers-1)])
         self.mol_hidden1 = nn.Linear(graph_hidden_channels, nhid)
         self.mol_hidden2 = nn.Linear(nhid, nout)
 
@@ -23,16 +25,28 @@ class GraphEncoder(nn.Module):
         x = graph_batch.x
         edge_index = graph_batch.edge_index
         batch = graph_batch.batch
-        x = self.conv1(x, edge_index)
+        x = self.conv_0(x, edge_index)
         x = x.relu()
-        x = self.conv2(x, edge_index)
-        x = x.relu()
-        x = self.conv3(x, edge_index)
+        for layer in self.hidden_gnn_layers:
+            x = layer(x, edge_index)
+            x = x.relu()
         x = global_mean_pool(x, batch)
         x = self.mol_hidden1(x).relu()
         x = self.mol_hidden2(x)
         return x
 
+class TextEncoderWithHead(nn.Module):
+    def __init__(self, model_name, n_out, bert_out=768):
+        super(TextEncoderWithHead, self).__init__()
+        self.bert = AutoModel.from_pretrained(model_name)
+        self.head = nn.Linear(bert_out, n_out)
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, input_ids, attention_mask):
+        encoded_text = self.bert(input_ids, attention_mask=attention_mask)
+        encoded_text = self.dropout(encoded_text.last_hidden_state[:,0,:])
+        return self.head(encoded_text)
+    
 class TextEncoder(nn.Module):
     def __init__(self, model_name):
         super(TextEncoder, self).__init__()
@@ -40,14 +54,17 @@ class TextEncoder(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         encoded_text = self.bert(input_ids, attention_mask=attention_mask)
-        #print(encoded_text.last_hidden_state.size())
         return encoded_text.last_hidden_state[:,0,:]
 
+
 class Model(nn.Module):
-    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels):
+    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers, text_head=False):
         super(Model, self).__init__()
-        self.graph_encoder = GraphEncoder(num_node_features, nout, nhid, graph_hidden_channels)
-        self.text_encoder = TextEncoder(model_name)
+        self.graph_encoder = GCNGraphEncoder(num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers)
+        if text_head:
+            self.text_encoder = TextEncoderWithHead(model_name, nout)
+        else:
+            self.text_encoder = TextEncoder(model_name)
 
     def forward(self, graph_batch, input_ids, attention_mask):
         graph_encoded = self.graph_encoder(graph_batch)
