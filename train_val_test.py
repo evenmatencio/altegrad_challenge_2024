@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import label_ranking_average_precision_score as lrap
 
-from loss import original_contrastive_loss
 from dataloader import GraphDataset, TextDataset
 from plot_utils import plot_losses, plot_lrap
 
@@ -25,6 +24,7 @@ def compute_LRAP_metric(text_embeddings: list, graph_embeddings: list):
 def train(
     nb_epochs: int,
     optimizer: torch.optim.Optimizer,
+    loss_func,
     model: torch.nn.Module,
     train_loader: torch_geometric.data.DataLoader,
     val_loader: torch_geometric.data.DataLoader,
@@ -74,7 +74,12 @@ def train(
                                     input_ids.to(device),
                                     attention_mask.to(device))
             # Metric computation
-            current_loss = original_contrastive_loss(x_graph, x_text)
+            # logits = torch.matmul(x_graph,torch.transpose(x_text, 0, 1))
+            # labels = torch.arange(logits.shape[0], device=x_graph.device)
+            # print(logits.shape)
+            # print(labels.shape)
+            #return x_graph, x_text, batch
+            current_loss = loss_func(x_graph, x_text)
             optimizer.zero_grad()
             current_loss.backward()
             optimizer.step()
@@ -99,12 +104,16 @@ def train(
             x_graph, x_text = model(graph_batch.to(device),
                                     input_ids.to(device),
                                     attention_mask.to(device))
-            current_loss = original_contrastive_loss(x_graph, x_text)
+            
+            
+            # logits = torch.matmul(x_graph,torch.transpose(x_text, 0, 1))
+            # labels = torch.arange(logits.shape[0], device=x_graph.device)
+            current_loss = loss_func(x_graph, x_text)
             val_loss += current_loss.item()
-            for x_graph_emb in x_graph:
-                val_graph_embeddings.append(x_graph_emb.tolist())
-            for x_text_emb in x_text:
-                val_text_embeddings.append(x_text_emb.tolist())
+            for x_graph_emb in x_graph.tolist():
+                val_graph_embeddings.append(x_graph_emb)
+            for x_text_emb in x_text.tolist():
+                val_text_embeddings.append(x_text_emb)
 
         val_lrap = compute_LRAP_metric(val_text_embeddings, val_graph_embeddings)
         val_loss = val_loss/len(val_loader)
@@ -138,7 +147,6 @@ def train(
             }, save_path_model)
             print(f'checkpoint saved to: {save_path_model}')
 
-
 def test(
     checkpoint_path: str,
     model: torch.nn.Module,
@@ -157,7 +165,6 @@ def test(
     text_model = model.get_text_encoder()
 
     # Generating representation of the graph test set
-    idx_to_cid = test_cids_dataset.get_idx_to_cid()
     graph_test_loader = DataLoader(test_cids_dataset, batch_size=batch_size, shuffle=False)
     graph_embeddings = []
     for batch in graph_test_loader:
