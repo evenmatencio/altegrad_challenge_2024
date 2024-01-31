@@ -25,7 +25,6 @@ def compute_LRAP_metric(text_embeddings: list, graph_embeddings: list):
 def train(
     nb_epochs: int,
     optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau,
     loss_func,
     model: torch.nn.Module,
     train_loader: torch_geometric.data.DataLoader,
@@ -34,6 +33,7 @@ def train(
     device,
     hyper_param_dict,
     save_id: int,
+    scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau = None,
     print_every: int = 50,
 ):
     """
@@ -65,7 +65,7 @@ def train(
     # Per batch training
     for i in range(nb_epochs):
         print(f'-----EPOCH{i+1}-----')
-        print(f" Learning rate: {scheduler.optimizer.param_groups[0]['lr']}")
+        print(f" Learning rate: {optimizer.param_groups[0]['lr']}")
         model.train()
         for batch in train_loader:
             # Forward step
@@ -124,9 +124,10 @@ def train(
         val_loss = val_loss/len(val_loader)
         val_losses.append(val_loss)
         val_lraps.append(val_lrap)
-        lrs.append(scheduler.optimizer.param_groups[0]['lr'])
+        lrs.append(optimizer.param_groups[0]['lr'])
 
-        scheduler.step(val_loss)
+        if scheduler is not None:
+            scheduler.step(val_loss)
 
         # Plotting
         if i == 0:
