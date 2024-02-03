@@ -1,13 +1,14 @@
 "Gather the encoders for text and graph, and the model."
 
 from torch import nn
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv, GINConv
 from torch_geometric.nn import global_mean_pool
+from torch_geometric.nn.aggr import AttentionalAggregation
 from transformers import AutoModel
 
 
 class GCNGraphEncoder(nn.Module):
-    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels, n_gnn_layers):
+    def __init__(self, num_node_features, nout, nhid, graph_hidden_channels, n_gnn_layers, use_aggregation_class):
         super(GCNGraphEncoder, self).__init__()
         self.nhid = nhid
         self.nout = nout
@@ -17,9 +18,17 @@ class GCNGraphEncoder(nn.Module):
         self.conv_0 = GCNConv(num_node_features, graph_hidden_channels)
         if self.n_layers < 2:
             raise ValueError("Number layers must be greater than 1.")
-        self.hidden_gnn_layers = nn.ModuleList([GCNConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_gnn_layers-1)])
-        self.mol_hidden1 = nn.Linear(graph_hidden_channels, nhid)
+        self.hidden_gnn_layers = nn.ModuleList([GINConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_gnn_layers-1)])
+        if use_aggregation_class:
+            gate_nn = nn.Linear(graph_hidden_channels, graph_hidden_channels)
+            to_attention_nn = nn.Linear(graph_hidden_channels, graph_hidden_channels)
+            self.aggregator = AttentionalAggregation(gate_nn, to_attention_nn)
+            self.aggragation_func = lambda x, index: self.aggregator.forward(x, index, dim=0)
+        else:
+            self.mol_hidden1 = nn.Linear(graph_hidden_channels, nhid)
+            self.aggragation_func = lambda x, index: self.mol_hidden1(global_mean_pool(x, index)).relu()
         self.mol_hidden2 = nn.Linear(nhid, nout)
+            
 
     def forward(self, graph_batch):
         x = graph_batch.x
@@ -30,8 +39,7 @@ class GCNGraphEncoder(nn.Module):
         for layer in self.hidden_gnn_layers:
             x = layer(x, edge_index)
             x = x.relu()
-        x = global_mean_pool(x, batch)
-        x = self.mol_hidden1(x).relu()
+        x = self.aggragation_func(x, index=batch)
         x = self.mol_hidden2(x)
         return x
 
@@ -58,9 +66,9 @@ class TextEncoder(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers, text_head=False):
+    def __init__(self, model_name, num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers, text_head=False, use_aggregation_class=False):
         super(Model, self).__init__()
-        self.graph_encoder = GCNGraphEncoder(num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers)
+        self.graph_encoder = GCNGraphEncoder(num_node_features, nout, nhid, graph_hidden_channels, graph_gnnlayers, use_aggregation_class)
         if text_head:
             self.text_encoder = TextEncoderWithHead(model_name, nout)
         else:

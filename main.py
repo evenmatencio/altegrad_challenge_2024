@@ -16,7 +16,8 @@ from train_val_test import train, test
 ##################################################
 ## TRAINING
 
-# Select model
+
+# Select text model
 model_name = 'distilbert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
