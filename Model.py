@@ -18,7 +18,7 @@ class GCNGraphEncoder(nn.Module):
         self.conv_0 = GCNConv(num_node_features, graph_hidden_channels)
         if self.n_layers < 2:
             raise ValueError("Number layers must be greater than 1.")
-        self.hidden_gnn_layers = nn.ModuleList([GINConv(graph_hidden_channels, graph_hidden_channels) for i in range(n_gnn_layers-1)])
+        self.hidden_gnn_layers = nn.ModuleList([GINConv(nn.Linear(graph_hidden_channels, graph_hidden_channels)) for i in range(n_gnn_layers-1)])
         if use_aggregation_class:
             gate_nn = nn.Linear(graph_hidden_channels, graph_hidden_channels)
             to_attention_nn = nn.Linear(graph_hidden_channels, graph_hidden_channels)
