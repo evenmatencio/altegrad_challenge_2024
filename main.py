@@ -11,30 +11,32 @@ from torch_geometric.loader import DataLoader
 from dataloader import GraphTextDataset, GraphDataset, TextDataset
 from Model import Model
 from train_val_test import train, test
+from LossFunctions import NTXent
 
 
 ##################################################
 ## TRAINING
 
-# Select model
+
+# Select text model
 model_name = 'distilbert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300, graph_gnnlayers=3, text_head=False) # nout = bert model hidden dim
+model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300, graph_gnnlayers=3, text_head=False, use_aggregation_class=True) # nout = bert model hidden dim
 model.to(device)
 
 # Load data
 gt = np.load("./data/token_embedding_dict.npy", allow_pickle=True)[()]
-val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=10)
-train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=10)
+val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=9)
+train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=9)
 
 # Hyper-parameters
 nb_epochs = 2
 batch_size = 2
 learning_rate = 2e-5
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), weight_decay=0.01)
-val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 hyper_param = {
     "nb_epochs": nb_epochs,
     "batch_size": batch_size,
@@ -48,7 +50,8 @@ hyper_param = {
 # Save path
 save_path = './model_checkpoints/test'
 
-train(nb_epochs, optimizer, model, train_loader, val_loader, save_path, device, hyper_param, save_id=0, print_every=2)
+loss_func = NTXent(device, batch_size, 0.1, True)
+train(nb_epochs, optimizer, loss_func, model, train_loader, val_loader, save_path, device, hyper_param, print_every=2)
 
 
 
