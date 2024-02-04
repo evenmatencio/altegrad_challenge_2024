@@ -22,13 +22,13 @@ from LossFunctions import NTXent
 model_name = 'distilbert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300, graph_gnnlayers=3, text_head=False) # nout = bert model hidden dim
+model = Model(model_name=model_name, num_node_features=300, nout=768, nhid=300, graph_hidden_channels=300, graph_gnnlayers=3, text_head=False, use_aggregation_class=True) # nout = bert model hidden dim
 model.to(device)
 
 # Load data
 gt = np.load("./data/token_embedding_dict.npy", allow_pickle=True)[()]
-val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=10)
-train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=10)
+val_dataset = GraphTextDataset(root='./data/', gt=gt, split='val', tokenizer=tokenizer, nrows=9)
+train_dataset = GraphTextDataset(root='./data/', gt=gt, split='train', tokenizer=tokenizer, nrows=9)
 
 # Hyper-parameters
 nb_epochs = 2
