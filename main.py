@@ -11,7 +11,7 @@ from torch_geometric.loader import DataLoader
 from dataloader import GraphTextDataset, GraphDataset, TextDataset
 from Model import Model
 from train_val_test import train, test
-from LossFunctions import NTXent
+import LossFunctions
 
 
 ##################################################
@@ -46,11 +46,12 @@ hyper_param = {
     "optimizer": optimizer.__str__(),
     "model": model.__str__()
     }
+loss = LossFunctions.NTXent('cpu', batch_size, 0.1, True)
 
 # Save path
 save_path = './model_checkpoints/test'
 
-loss_func = NTXent(device, batch_size, 0.1, True)
+loss_func = LossFunctions.NTXent(device, batch_size, 0.1, True)
 train(nb_epochs, optimizer, loss_func, model, train_loader, val_loader, save_path, device, hyper_param, print_every=2)
 
 

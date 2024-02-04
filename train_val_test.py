@@ -10,9 +10,10 @@ from torch_geometric.data import DataLoader
 from torch.utils.data import DataLoader as TorchDataLoader
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import label_ranking_average_precision_score as lrap
+import matplotlib.pyplot as plt
 
 from dataloader import GraphDataset, TextDataset
-from plot_utils import plot_losses, plot_lrap
+from plot_utils import plot_losses, plot_lrap, plot_lrs
 
 
 def compute_LRAP_metric(text_embeddings: list, graph_embeddings: list):
@@ -31,6 +32,7 @@ def train(
     save_path: str,
     device,
     hyper_param_dict,
+    scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau = None,
     print_every: int = 50,
 ):
     """
@@ -54,6 +56,7 @@ def train(
     losses = []
     val_losses = []
     val_lraps = []
+    lrs = []
     count_iter = 0
     time1 = time.time()
     best_validation_loss = 1000000
@@ -61,6 +64,7 @@ def train(
     # Per batch training
     for i in range(nb_epochs):
         print(f'-----EPOCH{i+1}-----')
+        print(f" Learning rate: {optimizer.param_groups[0]['lr']}")
         model.train()
         for batch in train_loader:
             # Forward step
@@ -119,6 +123,10 @@ def train(
         val_loss = val_loss/len(val_loader)
         val_losses.append(val_loss)
         val_lraps.append(val_lrap)
+        lrs.append(optimizer.param_groups[0]['lr'])
+
+        if scheduler is not None:
+            scheduler.step(val_loss)
 
         # Plotting
         if i == 0:
@@ -129,6 +137,10 @@ def train(
             loss_fig.savefig(f"{save_path}/losses.png")
             lrap_fig, _ = plot_lrap(val_lraps)
             lrap_fig.savefig(f"{save_path}/val_lrap.png")
+            plt.close()
+            lrs_fig, _ = plot_lrs(lrs)
+            lrs_fig.savefig(f"{save_path}/learning_rates.png")
+            plt.close()
         losses = []
         count_iter = 0
 
